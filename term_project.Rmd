@@ -1,0 +1,176 @@
+---
+title: "IML Term Project"
+output: html_notebook
+---
+
+```{r}
+npf <- read.csv("npf_train.csv")
+rownames(npf) <- npf[,"date"] 
+npf <- npf[,-1]
+npf <- npf[,-3]
+# View(npf)
+```
+
+```{r}
+head(npf)
+```
+
+iii. Use the plot() function to produce side-by-side boxplots of event vs. nonevent days.
+
+```{r}
+boxplot(RHIRGA84.mean ~ class4,npf)
+```
+
+```{r}
+npf$class2 <- factor("event",levels=c("nonevent","event"))
+npf$class2[npf$class4=="nonevent"] <- "nonevent"
+```
+
+
+Use the summary() function to see how many event days there are. Now use the plot() function to produce side-by-side boxplots of RHIRGA84.mean versus event.
+
+```{r}
+summary(npf$class2)
+```
+
+```{r}
+boxplot(CS.mean ~ class2,npf)
+par(mfrow=c(2,2))
+hist(npf$CO2168.mean)
+hist(npf$CO2168.std)
+hist(npf$H2O168.mean)
+hist(npf$H2O168.std)
+
+```
+
+omat
+
+```{r}
+par(mfrow=c(3,3))
+boxplot(Glob.mean ~ class2,npf)
+boxplot(UV_A.mean ~ class2,npf)
+boxplot(RHIRGA168.mean ~ class2,npf)
+boxplot(PAR.mean ~ class2,npf)
+boxplot(NET.mean ~ class2,npf)
+boxplot(UV_A.mean ~ class2,npf)
+boxplot(T84.mean ~ class2,npf)
+boxplot(PTG.mean ~ class2,npf)
+boxplot(UV_B.mean ~ class2,npf)
+```
+### ISOIMMAT EROT NONEVENT VS EVENT:
+* RHIRGA168 (+muut)
+* PAR
+* UV_A
+* NET
+
+### TEHTÄVÄ 10 pohjalta naive bayes
+
+Jaa test and training
+
+```{r}
+## 75% of the sample size
+npf_size <- floor(0.75 * nrow(npf))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(npf)), size = npf_size)
+
+train <- npf[train_ind, ]
+away <- c(3:24)
+train <- train[,-away]
+away2 <- c(4:40)
+train <- train[,-away2]
+away3 <- c(5:9)
+train <- train[,-away3]
+away4 <- c(6:32)
+train <- train[,-away4]
+away5 <- c(7:12)
+train <- train[,-away5]
+
+test <- npf[-train_ind, ]
+test <- test[,-away]
+test <- test[,-away2]
+test <- test[,-away3]
+test <- test[,-away4]
+test <- test[,-away5]
+
+train$class2 <- factor("event",levels=c("nonevent","event"))
+train$class2[train$class4=="nonevent"] <- "nonevent"
+
+test$class2 <- factor("event",levels=c("nonevent","event"))
+test$class2[test$class4=="nonevent"] <- "nonevent"
+```
+
+```{r}
+head(test)
+```
+
+
+Compute and report the means and standard deviations of each of the attributes in the training set
+
+```{r}
+# different event and nonevent
+npf_event <- subset(train, train$class2=="event" )
+npf_non <- subset(train, train$class2=="nonevent")
+```
+
+
+```{r}
+# means for event class
+muE <- c(mean(npf_event$PAR.mean),mean(npf_event$RHIRGA168.mean),mean(npf_event$UV_A.mean),mean(npf_event$NET.mean))
+```
+```{r}
+# sd:t
+sdE <- c(sd(npf_event$PAR.mean),sd(npf_event$RHIRGA168.mean),sd(npf_event$UV_A.mean),sd(npf_event$NET.mean))
+```
+
+```{r}
+# means for nonevent
+muN <- c(mean(npf_non$PAR.mean),mean(npf_non$RHIRGA168.mean),mean(npf_non$UV_A.mean),mean(npf_non$NET.mean))
+```
+
+```{r}
+sdN <- c(sd(npf_non$PAR.mean),sd(npf_non$RHIRGA168.mean),sd(npf_non$UV_A.mean),sd(npf_non$NET.mean))
+```
+
+
+```{r}
+# event 1 nonevent 0
+f <- function(x,mu,sigma) {
+  t <- exp(-(x-mu)^2/(2*sigma^2))/sqrt(2*pi*sigma^2)
+  return(t)
+} 
+phat <- function(x){
+  0.5*prod(f(x,muE,sdE))/(0.5*prod(f(x,muE,sdE))+0.5*prod(f(x,muN,sdN)))
+} 
+
+acc <- ifelse(apply(test[,3:6],1,phat)>=0.5,"event","nonevent")==test$class2
+print(acc)
+table(acc)["TRUE"]
+table(acc)["FALSE"]
+```
+
+#### DUMMY CLASSIFYIER
+
+```{r}
+# miten löydetty 396
+# boxplot useammasta muuttujasta (ekan viikon malliratkaisuista löytyy korrelaatio matrix -> valittu yksi arvo per korreloivat ja katsottu boxplotit)
+# jako event / nonevent dataan
+# miten jakaantuu niiden välille
+quantile(npf_event$PAR.mean, 0.217)
+quantile(npf_non$PAR.mean, 0.77)
+# näyttäisi että saadaan melko hyvä jako aikaan jos jaetaan noin 397 kohdalta, jolloin 77% nonevent jää alle 397 ja 78,3% event menee yli 397
+```
+
+```{r}
+acc_dummy <- ifelse(test$PAR.mean>396,"event","nonevent")==test$class2
+table(acc_dummy)["TRUE"]
+table(acc_dummy)["FALSE"]
+```
+
+
+
+
+
+
+
