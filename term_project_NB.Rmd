@@ -1,0 +1,119 @@
+---
+title: "term_project_naive_bayes"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### alkuvalmistelut
+```{r}
+npf <- read.csv("npf_train.csv")
+rownames(npf) <- npf[,"date"] 
+npf <- npf[,-1]
+npf <- npf[,-3]
+# View(npf)
+```
+
+```{r}
+head(npf)
+```
+
+```{r}
+npf$class2 <- factor("event",levels=c("nonevent","event"))
+npf$class2[npf$class4=="nonevent"] <- "nonevent"
+```
+
+```{r}
+head(npf)
+```
+
+### TEHTÄVÄ 10 pohjalta naive bayes
+
+### ISOIMMAT EROT NONEVENT VS EVENT:
+* RHIRGA
+* NET
+* RGlob
+
+Jaa test and training
+
+```{r}
+## 75% of the sample size
+npf_size <- floor(0.75 * nrow(npf))
+
+## set the seed to make your partition reproducible
+set.seed(123)
+train_ind <- sample(seq_len(nrow(npf)), size = npf_size)
+
+```
+
+```{r}
+train <- npf[train_ind, ]
+away <- c(3:24)
+train <- train[,-away]
+away2 <- c(4:43)
+train <- train[,-away2]
+train <- train[,-4]
+train <- train[,-5]
+away3 <- c(6:38)
+train <- train[,-away3]
+```
+
+```{r}
+head(train)
+```
+
+
+```{r}
+test <- npf[-train_ind, ]
+test <- test[,-away]
+test <- test[,-away2]
+test <- test[,-4]
+test <- test[,-5]
+test <- test[,-away3]
+head(test)
+```
+```{r}
+# different event and nonevent
+npf_event <- subset(train, train$class2=="event" )
+npf_non <- subset(train, train$class2=="nonevent")
+```
+
+
+```{r}
+# means for event class
+muE <- c(mean(npf_event$NET.mean),mean(npf_event$RGlob.mean),mean(npf_event$RHIRGA168.mean))
+```
+```{r}
+# sd:t
+sdE <- c(sd(npf_event$NET.mean),sd(npf_event$RGlob.mean),sd(npf_event$RHIRGA168.mean))
+```
+
+```{r}
+# means for nonevent
+muN <- c(mean(npf_non$NET.mean),mean(npf_non$RGlob.mean),mean(npf_non$RHIRGA168.mean))
+```
+
+```{r}
+sdN <- c(sd(npf_non$NET.mean),sd(npf_non$RGlob.mean),sd(npf_non$RHIRGA168.mean))
+```
+
+```{r}
+# event 1 nonevent 0
+f <- function(x,mu,sigma) {
+  t <- exp(-(x-mu)^2/(2*sigma^2))/sqrt(2*pi*sigma^2)
+  return(t)
+} 
+phat <- function(x){
+  0.5*prod(f(x,muE,sdE))/(0.5*prod(f(x,muE,sdE))+0.5*prod(f(x,muN,sdN)))
+} 
+
+acc <- ifelse(apply(test[,3:5],1,phat)>=0.5,"event","nonevent")==test$class2
+print(acc)
+table(acc)["TRUE"]
+table(acc)["FALSE"]
+```
+### lopputulos
+
+83/108 = 0,7685 oikein
